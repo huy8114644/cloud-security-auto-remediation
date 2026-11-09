@@ -19,6 +19,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Run Ruff Lint Check
+        uses: astral-sh/ruff-action@v3
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -27,19 +30,15 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy pytest pytest-cov pydantic boto3 botocore
-
-      - name: Run Ruff Lint Check
-        run: |
-          python -m ruff check .
+          pip install mypy pytest pytest-cov pydantic boto3 botocore
 
       - name: Run Mypy Static Type Analysis
         run: |
-          python -m mypy src/
+          mypy src/
 
       - name: Run Pytest Suite with Coverage
         run: |
-          python -m pytest --cov=src --cov-report=term-missing tests/
+          pytest --cov=src --cov-report=term-missing tests/
 
   secret-and-container-scan:
     name: Gitleaks Secret & Container Audit
