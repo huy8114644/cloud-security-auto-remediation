@@ -1,5 +1,4 @@
 from unittest.mock import MagicMock
-import pytest
 from src.core.models import SecurityFinding, FindingSeverity, RemediationStatus
 from src.core.dispatcher import RemediationDispatcher
 from src.remediators.iam import IAMRemediator

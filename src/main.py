@@ -1,5 +1,3 @@
-import sys
-import json
 import logging
 from .core.models import SecurityFinding, FindingSeverity
 from .core.dispatcher import RemediationDispatcher

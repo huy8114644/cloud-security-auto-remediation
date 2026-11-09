@@ -1,5 +1,4 @@
 import logging
-from typing import Any, Optional
 from ..core.models import SecurityFinding, RemediationResult, RemediationStatus
 from .base import BaseRemediator
 

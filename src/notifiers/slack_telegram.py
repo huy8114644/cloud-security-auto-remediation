@@ -45,6 +45,7 @@ class SecurityAlertNotifier:
 
     def notify(self, finding: SecurityFinding, result: RemediationResult) -> bool:
         payload = self.format_slack_message(finding, result)
-        logger.info(f"Dispatched SOAR alert for finding={finding.id}, status={result.status.value}")
+        att_count = len(payload.get("attachments", []))
+        logger.info(f"Dispatched SOAR alert for finding={finding.id}, status={result.status.value}, attachments={att_count}")
         return True
 
