@@ -15,7 +15,9 @@ class RemediationDispatcher:
     and dispatching audit telemetry notifications.
     """
 
-    def __init__(self, dry_run: bool = False, remediators: list[BaseRemediator] | None = None) -> None:
+    def __init__(
+        self, dry_run: bool = False, remediators: list[BaseRemediator] | None = None
+    ) -> None:
         self.dry_run = dry_run
         self.remediators = remediators or [
             IAMRemediator(dry_run=dry_run),
@@ -43,4 +45,3 @@ class RemediationDispatcher:
             actions_taken=[f"No remediator configured for {finding.resource_type}"],
         )
         return result
-

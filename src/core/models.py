@@ -23,7 +23,9 @@ class SecurityFinding(BaseModel):
     title: str = Field(description="Finding title or alert summary")
     source: str = Field(description="Source system e.g. aws.guardduty, aws.securityhub, k8s.falco")
     severity: FindingSeverity
-    resource_type: str = Field(description="Type of resource e.g. AWS::IAM::AccessKey, AWS::S3::Bucket, K8s::Pod")
+    resource_type: str = Field(
+        description="Type of resource e.g. AWS::IAM::AccessKey, AWS::S3::Bucket, K8s::Pod"
+    )
     resource_id: str = Field(description="Resource ARN or identifier")
     account_id: str | None = Field(default=None, description="Cloud account ID")
     region: str | None = Field(default="us-east-1", description="Cloud region")
@@ -38,4 +40,3 @@ class RemediationResult(BaseModel):
     actions_taken: list[str]
     details: dict[str, Any] = Field(default_factory=dict)
     executed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
