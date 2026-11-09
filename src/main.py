@@ -2,7 +2,9 @@ import logging
 from .core.models import SecurityFinding, FindingSeverity
 from .core.dispatcher import RemediationDispatcher
 
-logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(name)s: %(message)s"
+)
 logger = logging.getLogger("soar-engine")
 
 
@@ -18,7 +20,7 @@ def run_sample_remediation() -> None:
         severity=FindingSeverity.CRITICAL,
         resource_type="AWS::IAM::AccessKey",
         resource_id="AKIAIOSFODNN7EXAMPLE",
-        details={"userName": "cicd-deployer-bot", "accessKeyId": "AKIAIOSFODNN7EXAMPLE"}
+        details={"userName": "cicd-deployer-bot", "accessKeyId": "AKIAIOSFODNN7EXAMPLE"},
     )
     result_iam = dispatcher.dispatch(iam_finding)
     print(f"Result IAM: {result_iam.model_dump_json(indent=2)}")
@@ -31,7 +33,7 @@ def run_sample_remediation() -> None:
         severity=FindingSeverity.HIGH,
         resource_type="AWS::S3::Bucket",
         resource_id="arn:aws:s3:::customer-invoices-backup",
-        details={"bucketName": "customer-invoices-backup"}
+        details={"bucketName": "customer-invoices-backup"},
     )
     result_s3 = dispatcher.dispatch(s3_finding)
     print(f"Result S3: {result_s3.model_dump_json(indent=2)}")
@@ -39,4 +41,3 @@ def run_sample_remediation() -> None:
 
 if __name__ == "__main__":
     run_sample_remediation()
-

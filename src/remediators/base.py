@@ -17,4 +17,3 @@ class BaseRemediator(ABC):
     def remediate(self, finding: SecurityFinding) -> RemediationResult:
         """Executes automated remediation workflow."""
         pass
-

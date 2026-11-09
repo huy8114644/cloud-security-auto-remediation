@@ -30,7 +30,7 @@ class S3Remediator(BaseRemediator):
                 remediator=self.__class__.__name__,
                 status=RemediationStatus.DRY_RUN,
                 actions_taken=actions_taken,
-                details={"bucket_name": bucket_name}
+                details={"bucket_name": bucket_name},
             )
 
         try:
@@ -42,8 +42,8 @@ class S3Remediator(BaseRemediator):
                         "BlockPublicAcls": True,
                         "IgnorePublicAcls": True,
                         "BlockPublicPolicy": True,
-                        "RestrictPublicBuckets": True
-                    }
+                        "RestrictPublicBuckets": True,
+                    },
                 )
             actions_taken.append(f"Enforced S3 Block Public Access (all 4 flags) on {bucket_name}")
 
@@ -55,7 +55,7 @@ class S3Remediator(BaseRemediator):
                 remediator=self.__class__.__name__,
                 status=RemediationStatus.SUCCESS,
                 actions_taken=actions_taken,
-                details={"bucket_name": bucket_name}
+                details={"bucket_name": bucket_name},
             )
         except Exception as e:
             logger.error(f"Failed to remediate S3 bucket {bucket_name}: {e}")
@@ -64,6 +64,5 @@ class S3Remediator(BaseRemediator):
                 remediator=self.__class__.__name__,
                 status=RemediationStatus.FAILED,
                 actions_taken=actions_taken,
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
-

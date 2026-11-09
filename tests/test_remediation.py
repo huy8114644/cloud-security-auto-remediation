@@ -16,7 +16,7 @@ def test_iam_remediator_dry_run():
         severity=FindingSeverity.CRITICAL,
         resource_type="AWS::IAM::AccessKey",
         resource_id="AKIA12345678",
-        details={"userName": "alice"}
+        details={"userName": "alice"},
     )
     assert remediator.can_remediate(finding) is True
 
@@ -36,14 +36,12 @@ def test_iam_remediator_live_execution():
         severity=FindingSeverity.HIGH,
         resource_type="AWS::IAM::AccessKey",
         resource_id="AKIA99999999",
-        details={"userName": "bob", "accessKeyId": "AKIA99999999"}
+        details={"userName": "bob", "accessKeyId": "AKIA99999999"},
     )
     result = remediator.remediate(finding)
     assert result.status == RemediationStatus.SUCCESS
     mock_iam_client.update_access_key.assert_called_once_with(
-        UserName="bob",
-        AccessKeyId="AKIA99999999",
-        Status="Inactive"
+        UserName="bob", AccessKeyId="AKIA99999999", Status="Inactive"
     )
 
 
@@ -56,7 +54,7 @@ def test_s3_remediator_live_execution():
         source="aws.securityhub",
         severity=FindingSeverity.CRITICAL,
         resource_type="AWS::S3::Bucket",
-        resource_id="arn:aws:s3:::prod-customer-data"
+        resource_id="arn:aws:s3:::prod-customer-data",
     )
     assert remediator.can_remediate(finding) is True
 
@@ -74,15 +72,14 @@ def test_host_workload_ec2_quarantine():
         source="aws.guardduty",
         severity=FindingSeverity.CRITICAL,
         resource_type="AWS::EC2::Instance",
-        resource_id="i-0abcdef1234567890"
+        resource_id="i-0abcdef1234567890",
     )
     assert remediator.can_remediate(finding) is True
 
     result = remediator.remediate(finding)
     assert result.status == RemediationStatus.SUCCESS
     mock_ec2_client.modify_instance_attribute.assert_called_once_with(
-        InstanceId="i-0abcdef1234567890",
-        Groups=["sg-quarantine-isolated"]
+        InstanceId="i-0abcdef1234567890", Groups=["sg-quarantine-isolated"]
     )
 
 
@@ -94,7 +91,7 @@ def test_dispatcher_routes_correctly():
         source="aws.guardduty",
         severity=FindingSeverity.HIGH,
         resource_type="AWS::IAM::AccessKey",
-        resource_id="AKIA_SAMPLE_123"
+        resource_id="AKIA_SAMPLE_123",
     )
     result = dispatcher.dispatch(finding)
     assert result.status == RemediationStatus.DRY_RUN
@@ -109,7 +106,7 @@ def test_dispatcher_skipped_unsupported_resource():
         source="aws.securityhub",
         severity=FindingSeverity.LOW,
         resource_type="AWS::RDS::DBInstance",
-        resource_id="db-unknown"
+        resource_id="db-unknown",
     )
     result = dispatcher.dispatch(finding)
     assert result.status == RemediationStatus.SKIPPED
@@ -124,7 +121,7 @@ def test_slack_notifier_format():
         source="aws.guardduty",
         severity=FindingSeverity.CRITICAL,
         resource_type="AWS::S3::Bucket",
-        resource_id="arn:aws:s3:::my-bucket"
+        resource_id="arn:aws:s3:::my-bucket",
     )
     mock_result = MagicMock()
     mock_result.status.value = "SUCCESS"
@@ -134,4 +131,3 @@ def test_slack_notifier_format():
     payload = notifier.format_slack_message(finding, mock_result)
     assert "attachments" in payload
     assert payload["attachments"][0]["color"] == "#ff0000"
-

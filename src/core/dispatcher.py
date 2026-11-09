@@ -16,7 +16,9 @@ class RemediationDispatcher:
     and dispatching audit telemetry notifications.
     """
 
-    def __init__(self, dry_run: bool = False, remediators: Optional[List[BaseRemediator]] = None) -> None:
+    def __init__(
+        self, dry_run: bool = False, remediators: Optional[List[BaseRemediator]] = None
+    ) -> None:
         self.dry_run = dry_run
         self.remediators = remediators or [
             IAMRemediator(dry_run=dry_run),
@@ -26,7 +28,9 @@ class RemediationDispatcher:
         self.notifier = SecurityAlertNotifier(dry_run=dry_run)
 
     def dispatch(self, finding: SecurityFinding) -> RemediationResult:
-        logger.info(f"Processing finding {finding.id} (severity={finding.severity.value}, resource={finding.resource_type})")
+        logger.info(
+            f"Processing finding {finding.id} (severity={finding.severity.value}, resource={finding.resource_type})"
+        )
 
         for remediator in self.remediators:
             if remediator.can_remediate(finding):
@@ -39,7 +43,6 @@ class RemediationDispatcher:
             finding_id=finding.id,
             remediator="None",
             status=RemediationStatus.SKIPPED,
-            actions_taken=[f"No remediator configured for {finding.resource_type}"]
+            actions_taken=[f"No remediator configured for {finding.resource_type}"],
         )
         return result
-
