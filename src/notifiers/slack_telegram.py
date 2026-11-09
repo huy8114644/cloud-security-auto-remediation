@@ -1,6 +1,6 @@
 import logging
-from typing import Dict, Any
-from ..core.models import SecurityFinding, RemediationResult
+from typing import Any
+from ..core.models import RemediationResult, SecurityFinding
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +11,7 @@ class SecurityAlertNotifier:
     def __init__(self, dry_run: bool = False) -> None:
         self.dry_run = dry_run
 
-    def format_slack_message(
-        self, finding: SecurityFinding, result: RemediationResult
-    ) -> Dict[str, Any]:
+    def format_slack_message(self, finding: SecurityFinding, result: RemediationResult) -> dict[str, Any]:
         severity_colors = {
             "CRITICAL": "#ff0000",
             "HIGH": "#ff9900",
@@ -22,9 +20,7 @@ class SecurityAlertNotifier:
         }
         color = severity_colors.get(finding.severity.value, "#808080")
 
-        actions_str = (
-            "\n• ".join(result.actions_taken) if result.actions_taken else "No actions recorded"
-        )
+        actions_str = "\n• ".join(result.actions_taken) if result.actions_taken else "No actions recorded"
 
         return {
             "attachments": [
@@ -37,11 +33,7 @@ class SecurityAlertNotifier:
                         {"title": "Severity", "value": finding.severity.value, "short": True},
                         {"title": "Source", "value": finding.source, "short": True},
                         {"title": "Resource", "value": finding.resource_id, "short": True},
-                        {
-                            "title": "Remediation Status",
-                            "value": result.status.value,
-                            "short": True,
-                        },
+                        {"title": "Remediation Status", "value": result.status.value, "short": True},
                         {
                             "title": "Execution Mode",
                             "value": "DRY RUN" if self.dry_run else "LIVE AUTOMATED",
@@ -62,3 +54,4 @@ class SecurityAlertNotifier:
             f"Dispatched SOAR alert for finding={finding.id}, status={result.status.value}, attachments={att_count}"
         )
         return True
+

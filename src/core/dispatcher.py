@@ -1,11 +1,10 @@
 import logging
-from typing import List, Optional
-from .models import SecurityFinding, RemediationResult, RemediationStatus
+from .models import RemediationResult, RemediationStatus, SecurityFinding
+from ..notifiers.slack_telegram import SecurityAlertNotifier
 from ..remediators.base import BaseRemediator
+from ..remediators.ec2_k8s import HostWorkloadRemediator
 from ..remediators.iam import IAMRemediator
 from ..remediators.s3 import S3Remediator
-from ..remediators.ec2_k8s import HostWorkloadRemediator
-from ..notifiers.slack_telegram import SecurityAlertNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +15,7 @@ class RemediationDispatcher:
     and dispatching audit telemetry notifications.
     """
 
-    def __init__(
-        self, dry_run: bool = False, remediators: Optional[List[BaseRemediator]] = None
-    ) -> None:
+    def __init__(self, dry_run: bool = False, remediators: list[BaseRemediator] | None = None) -> None:
         self.dry_run = dry_run
         self.remediators = remediators or [
             IAMRemediator(dry_run=dry_run),
@@ -46,3 +43,4 @@ class RemediationDispatcher:
             actions_taken=[f"No remediator configured for {finding.resource_type}"],
         )
         return result
+

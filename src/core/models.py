@@ -1,6 +1,6 @@
-from enum import Enum
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -23,13 +23,11 @@ class SecurityFinding(BaseModel):
     title: str = Field(description="Finding title or alert summary")
     source: str = Field(description="Source system e.g. aws.guardduty, aws.securityhub, k8s.falco")
     severity: FindingSeverity
-    resource_type: str = Field(
-        description="Type of resource e.g. AWS::IAM::AccessKey, AWS::S3::Bucket, K8s::Pod"
-    )
+    resource_type: str = Field(description="Type of resource e.g. AWS::IAM::AccessKey, AWS::S3::Bucket, K8s::Pod")
     resource_id: str = Field(description="Resource ARN or identifier")
-    account_id: Optional[str] = Field(default=None, description="Cloud account ID")
-    region: Optional[str] = Field(default="us-east-1", description="Cloud region")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Raw event metadata")
+    account_id: str | None = Field(default=None, description="Cloud account ID")
+    region: str | None = Field(default="us-east-1", description="Cloud region")
+    details: dict[str, Any] = Field(default_factory=dict, description="Raw event metadata")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -37,6 +35,7 @@ class RemediationResult(BaseModel):
     finding_id: str
     remediator: str
     status: RemediationStatus
-    actions_taken: List[str]
-    details: Dict[str, Any] = Field(default_factory=dict)
+    actions_taken: list[str]
+    details: dict[str, Any] = Field(default_factory=dict)
     executed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
