@@ -1,131 +1,76 @@
-# Cloud Security Auto-Remediation (SOAR Engine)
+# Cloud Security Auto-Remediation
 
-[![Python SOAR CI](https://github.com/huy8114644/cloud-security-auto-remediation/actions/workflows/ci.yml/badge.svg)](https://github.com/huy8114644/cloud-security-auto-remediation/actions/workflows/ci.yml)
-[![Python: 3.12](https://img.shields.io/badge/Python-3.12-3776ab.svg?logo=python&logoColor=white)](https://python.org)
-[![Security: Pydantic v2](https://img.shields.io/badge/Validation-Pydantic%20v2-e92063.svg)](https://pydantic.dev)
-[![Ruff: Checked](https://img.shields.io/badge/Code%20Style-Ruff-261230.svg)](https://astral.sh/ruff)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/huy8114644/cloud-security-auto-remediation/actions/workflows/ci.yml/badge.svg)](https://github.com/huy8114644/cloud-security-auto-remediation/actions/workflows/ci.yml)
 
-Production-grade **Cloud Security Orchestration, Automation, and Response (SOAR)** engine written in modern Python 3.12. Designed for automated, zero-human-delay threat containment across **AWS GuardDuty**, **AWS Security Hub**, and **Kubernetes Audit Logs**.
+A synchronous Python SOAR prototype that validates normalized findings, chooses handlers and formats incident cards. The local demo models IAM/S3 decisions without changing AWS. This is a library and sample runner, not a production webhook service.
 
----
-
-## 🎯 Problem Statement & Core Value
-
-Average Mean Time to Remediate (MTTR) for compromised cloud credentials or public storage exposures often exceeds 30 minutes when relying on manual security triage. During this window, adversaries automate credential exfiltration, deploy cryptominers, or download sensitive proprietary data.
-
-This engine provides an event-driven, automated response pipeline:
-1. **Zero-Latency Ingestion:** Ingests alerts from AWS EventBridge, Security Hub, or Kubernetes Falco webhooks.
-2. **Deterministic Pydantic v2 Validation:** Strongly validates alert payload structure with zero unhandled runtime exceptions.
-3. **Automated Containment Playbooks:** Revokes compromised IAM credentials, enforces S3 Block Public Access, quarantines EC2/K8s workloads, and disables compromised KMS keys.
-4. **ChatOps Telemetry:** Dispatches rich incident response cards to Slack and Telegram with full execution context and rollback guidance.
-
----
-
-## 🏛️ Event-Driven SOAR Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Sources ["1. Threat Detection Sources"]
-        A[AWS GuardDuty<br/>Compromised IAM / EC2]
-        B[AWS Security Hub<br/>Public S3 / Open SG]
-        C[Falco / K8s Audit<br/>Crypto-miners / RCE]
-    end
-
-    subgraph Bus ["2. Event Ingestion"]
-        A & B & C --> D[AWS EventBridge /<br/>Webhook Receiver]
-    end
-
-    subgraph Engine ["3. Python SOAR Dispatcher (AsyncIO + Pydantic v2)"]
-        D --> E[Finding Validator<br/>Strict Schema Validation]
-        E --> F{Event Router}
-    end
-
-    subgraph Remediators ["4. Automated Remediation Playbooks"]
-        F -->|IAM Compromise| G[IAMRemediator<br/>Deactivate Key + Quarantine Policy]
-        F -->|Public S3| H[S3Remediator<br/>Enforce Block Public Access + SSE-KMS]
-        F -->|RCE / Mining| I[HostRemediator<br/>Quarantine-SG + Pod Isolation]
-        F -->|KMS Compromise| J[KMSRemediator<br/>Cryptographic Key Revocation]
-    end
-
-    subgraph Triage ["5. Real-Time Telemetry & Notification"]
-        G & H & I & J --> K[Slack / Telegram<br/>Rich Security Card + Audit Logs]
-    end
-
-    classDef dark fill:#0a192f,stroke:#4fd6a8,stroke-width:1.5px,color:#e6f1ff;
-    class Sources,Bus,Engine,Remediators,Triage dark;
+  AWS[GuardDuty or Security Hub] -. adapter required .-> Finding[Pydantic SecurityFinding]
+  Falco[Falco event] -. adapter required .-> Finding
+  Sample[Two sample findings] --> Finding
+  Finding --> Dispatcher[Resource type dispatcher]
+  Dispatcher --> IAM[IAM handler]
+  Dispatcher --> S3[S3 handler]
+  Dispatcher --> Host[EC2 or Pod handler]
+  IAM & S3 & Host --> Result[RemediationResult]
+  Result --> Card[Slack card formatter and log]
+  Card -. transport unimplemented .-> Alert[Slack or Telegram]
+  PR[Pull request] --> Checks[Ruff, mypy and mocked tests]
+  Checks --> Image[Docker build and image scan]
+  Image --> Review[Operator review]
+  Review -. future integration .-> Runtime[External event runner]
 ```
 
----
+## Scope and implementation limits
 
-## 🛡️ Remediation Playbooks & MITRE ATT&CK Mapping
+| Component | Current scope |
+|---|---|
+| `src/core/` | Pydantic models and synchronous dispatcher; no AsyncIO/event bus |
+| `iam.py` | Injected client can call `update_access_key`; quarantine policy text is not an API call |
+| `s3.py` | Injected client can block public access; encryption is described, not applied |
+| `ec2_k8s.py` | EC2 example uses placeholder SG; Pod isolation/forensics are descriptive |
+| `kms.py`, `rds.py` | Standalone examples, not registered by default dispatcher |
+| `src/notifiers/` | Formats/logs Slack payloads; no network delivery |
+| `tests/` | Mocked call, dispatch and formatting checks; no live AWS coverage |
 
-| Finding Type | Trigger / Source | MITRE ATT&CK | Automated Remediation Action |
-|---|---|---|---|
-| **Compromised IAM Key** | `UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration` | T1552 - Unsecured Credentials | Deactivates Access Key via `UpdateAccessKey`, attaches inline quarantine deny policy |
-| **Public S3 Bucket** | `S3.1 S3 Block Public Access` (Security Hub) | T1530 - Data from Cloud Storage | Enables all 4 S3 Block Public Access flags, enforces SSE-KMS encryption |
-| **EC2 Cryptomining / C2** | `Trojan:EC2/DNSDataExfiltration` (GuardDuty) | T1496 - Resource Hijacking | Swaps active Security Groups with isolated `Quarantine-SG` (blocks all traffic) |
-| **Kubernetes Pod RCE** | `Terminal shell in production container` (Falco) | T1059 - Command and Scripting | Applies Zero-Trust network isolation policy, isolates compromised pod |
-| **Compromised KMS Key** | `UnauthorizedAccess:KMS/KeyCompromise` | T1552 - Cryptographic Secrets | Immediately disables key via `DisableKey` preventing unauthorized decryption |
+Some handlers report non-dry-run success even without a client; result text is not proof of an AWS change. Do not use them for unattended response. Production integration still needs authenticated ingestion, approvals, idempotency, retries, scoped accounts/resources, durable audit storage, real transports and tested reversal playbooks.
 
----
+## Local quickstart
 
-## ⚙️ Environment Variables & Configuration
-
-The SOAR engine is configured via standard environment variables:
-
-| Variable | Type | Default | Description |
-|---|---|---|---|
-| `AWS_DEFAULT_REGION` | String | `us-east-1` | AWS region for Boto3 API remediation calls |
-| `DRY_RUN` | Boolean | `true` | When true, simulates actions without modifying AWS resources |
-| `SLACK_WEBHOOK_URL` | String | `null` | Webhook URL for Slack incident triage card notifications |
-| `TELEGRAM_BOT_TOKEN` | String | `null` | Telegram Bot API token for security alerts |
-| `TELEGRAM_CHAT_ID` | String | `null` | Telegram channel or group chat ID |
-| `LOG_LEVEL` | String | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-
----
-
-## 🚀 Local Developer Quickstart
-
-Standardized operational tasks are automated via the included `Makefile`:
+Requires Python 3.11+ (CI 3.12), Make and optionally Docker. No cloud credentials or notification secrets are needed.
 
 ```bash
-# 1. View all available Makefile commands
-make help
-
-# 2. Run Ruff linter and code style formatting check
-make lint
-
-# 3. Run Mypy static type verification (strict mode)
-make typecheck
-
-# 4. Run Pytest unit tests with coverage report
-make test
-
-# 5. Run Gitleaks secret detection scan
-make scan
-
-# 6. Execute sample dry-run remediation simulation
-make run-demo
-```
-
----
-
-## 📦 Production Deployment (AWS Lambda / ECS Fargate)
-
-The engine can be deployed as an event-driven AWS Lambda function or a continuous ECS Fargate container:
-
-```bash
-# Build hardened production container image
+make setup
+make lint typecheck test
+make plan        # Two synthetic IAM/S3 findings with dry_run=True
+make scan        # Gitleaks v8 required; missing CLI/findings fail
 make build
-
-# Deploy container to AWS ECR
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
-docker tag cloud-soar-remediator:local <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/cloud-soar:latest
-docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/cloud-soar:latest
+docker run --rm --network none --read-only --cap-drop ALL cloud-soar-remediator:local
 ```
 
----
+`make plan` runs the sample, not an AWS change plan; `make run-demo` is an alias. Tests report coverage without a percentage gate. Legacy `reports/` JSON contains fixed counts, not proven remediations.
 
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Configuration
+
+No application environment variables are currently read by `src/`. Names such as `DRY_RUN`, `SLACK_WEBHOOK_URL` and `QUARANTINE_SECURITY_GROUP` are not implemented settings.
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `PYTHON` (Make) | `.venv/bin/python` | Interpreter/dependency environment |
+| `IMAGE` (Make) | `cloud-soar-remediator:local` | Container build tag |
+| `PYTHONUNBUFFERED` (image env) | `1` | Immediate output |
+| `PYTHONDONTWRITEBYTECODE` (image env) | `1` | Avoid runtime bytecode writes |
+| `dry_run` (Python constructor) | `False`; sample sets `True` | Prefer sample; do not infer safety from constructor defaults |
+
+## Delivery and rollback
+
+The supported delivery is the offline sample container. No Lambda handler, Kubernetes deployment or GitOps reconciliation is supplied. Implement missing safeguards before a sandbox integration, then mock success/failure and validate with scoped temporary credentials. Do not expose the prototype as an unauthenticated endpoint.
+
+Revert faulty library/container code to its last reviewed version. This does not undo IAM/S3/EC2 changes: restoring keys, policies or security groups needs incident review and saved prior state.
+
+## Contributions
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Record the use case, tested SHA, CI link and remaining limits in real PRs. A passing mocked suite does not establish production readiness.
