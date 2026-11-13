@@ -19,10 +19,14 @@ flowchart LR
   Result --> Card[Slack card formatter and log]
   Card -. transport unimplemented .-> Alert[Slack or Telegram]
   PR[Pull request] --> Checks[Ruff, mypy and mocked tests]
-  Checks --> Image[Docker build and image scan]
+  Checks --> Image[Docker build and advisory image scan]
   Image --> Review[Operator review]
   Review -. future integration .-> Runtime[External event runner]
 ```
+
+CI enforces Ruff, mypy and mocked tests. Its Gitleaks command suppresses failures with `|| true`, and Trivy findings use advisory default exit behavior. A successful CI run does not establish that either security scan found no issues; the local `make scan` target fails on findings.
+
+The separate scheduled `daily-remediation-simulation.yml` workflow runs the sample and still commits a digest with fixed processed/remediated counts and a compliance label. Those numbers are not measured AWS actions or validated compliance results.
 
 ## Scope and implementation limits
 
